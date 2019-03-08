@@ -27,22 +27,36 @@ module.exports.serviceTokenVerification = (req, res, next) => {
     next(err)
   }
 }
+module.exports.userTokenVerification = (req, res, next) => {
+  try {
+    req.jwt = verifyToken(req.headers.authorization, true)
+    next()
+  } catch (err) {
+    next(err)
+  }
+}
 
 module.exports.requestVerifiction = (req, res, next) => {
   // Verify Method
-  if (apiConfig.acceptedMethods.indexOf(req.method) < 0) {
+  if (apiConfig.shouldCheckMethod && apiConfig.acceptedMethods.indexOf(req.method) < 0) {
     return next(new HTTPErrors.MethodNotAllowed('Bad Method: Not Allowed'))
   }
 
   // Verify Content-Type
-  // if (!(apiConfig.acceptedContentTypes.some(a => req.headers['accept'].indexOf(a) > -1))) {
-  //   return next(new HTTPErrors.Unacceptable('Expected Content Type: Unacceptable'))
-  // }
+  if (apiConfig.shouldCheckAccepted && (!_verifyReqAccept(req.headers['accept']) || !apiConfig.acceptedContentTypes.some(a => req.accepts(a)))) {
+    return next(new HTTPErrors.Unacceptable('Expected Content Type: Unacceptable'))
+  }
 
   // Verify Content Type
-  if ((['POST', 'PATCH', 'PUT'].indexOf(req.method) > -1) && (req.headers['content-type'] !== apiConfig.contentType)) {
+  if (apiConfig.shouldCheckContentType && ((['POST', 'PATCH', 'PUT'].indexOf(req.method) > -1) && (req.headers['content-type'] !== apiConfig.contentType))) {
     return next(new HTTPErrors.Unacceptable('Provided Content Type: Unacceptable'))
   }
 
   return next()
+}
+
+const _verifyReqAccept = accept => {
+  return Array.isArray(accept)
+    ? accept.length > 0
+    : (accept && accept.length > 0 && accept !== '*/*')
 }
