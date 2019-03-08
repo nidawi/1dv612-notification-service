@@ -29,19 +29,11 @@ const createApp = () => {
   app.use(bodyParser.json())
 
   app.use(plugins.helmetConfig)
-  app.use((req, res, next) => {
-    // Verify Method
-    if (apiConfig.acceptedMethods.indexOf(req.method) < 0) return next(new HTTPErrors.MethodNotAllowed('Bad Method: Not Allowed'))
-    // Verify Content-Type (We only respond using status codes)
-    // if (!(apiConfig.acceptedContentTypes.some(a => req.headers['accept'].indexOf(a) > -1))) return next(new HTTPErrors.Unacceptable('Expected Content Type: Unacceptable'))
-    // Verify Content Type
-    if ((['POST'].indexOf(req.method) > -1) && (req.headers['content-type'] !== apiConfig.contentType)) return next(new HTTPErrors.Unacceptable('Bad Content Type: Unacceptable'))
+  app.use(security.requestVerifiction)
+  app.use(security.serviceTokenVerification)
 
-    return next()
-  })
-
-  // Create & Apply security measures to route.
-  app.use('/send', security, require('../routes/send'))
+  // Create route.
+  app.use('/send', require('../routes/send'))
 
   // Invalid route / Error
   app.use((req, res, next) => next(new HTTPErrors.NotFoundError()))
